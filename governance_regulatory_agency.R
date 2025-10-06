@@ -560,3 +560,255 @@ ggplot(plot_long, aes(x = ano_arq, y = valor, color = dim)) +
     )
 
 
+################################################
+#CRIANDO GRÁFICO CRESCIMENTO PERCENTUAL ANUAL DOS MILITARES NO GOVERNO
+#NAS AGENCIAS E EM CARGOS NAS AGENCIAS
+#############################################
+
+# 2. Selecione e padronize as colunas
+cresc_anual <- df_ano_out %>%
+    rename(
+        ano = ano_arq,
+        total_militares_governo = total_militares_governo,
+        total_militares_ars = total_militares_ars,
+        total_militares_ars_com_cargo = total_militares_ars_com_cargo
+    ) %>%
+    filter(!is.na(ano)) %>%
+    group_by(ano) %>%
+    summarise(
+        total_militares_governo = sum(total_militares_governo, na.rm=TRUE),
+        total_militares_ars = sum(total_militares_ars, na.rm=TRUE),
+        total_militares_ars_com_cargo = sum(total_militares_ars_com_cargo, na.rm=TRUE)
+    ) %>% 
+    arrange(ano)
+
+# 3. Calcule o percentual de crescimento anual
+cresc_anual_1 <- cresc_anual %>%
+    mutate(
+        crescimento_militares_governo = 100 * (total_militares_governo / lag(total_militares_governo) - 1),
+        crescimento_militares_ars = 100 * (total_militares_ars / lag(total_militares_ars) - 1),
+        crescimento_militares_ars_com_cargo = 100 * (total_militares_ars_com_cargo / lag(total_militares_ars_com_cargo) - 1)
+    )
+
+cresc_anual_1_long <- cresc_anual_1 %>%
+    pivot_longer(
+        cols = starts_with("crescimento_"),
+        names_to = "Variavel",
+        values_to = "Percentual"
+    )
+
+# Ajuste os rótulos se quiser mais legibilidade
+cresc_anual_1_long$Variavel <- recode(cresc_anual_1_long$Variavel,
+                           crescimento_militares_governo = "Officers in the Government",
+                           crescimento_militares_ars = "Officers in Regulatory Agencies",
+                           crescimento_militares_ars_com_cargo = "Officers as appointees in RAs")
+
+# Gráfico de barras agrupadas
+fig_A_cres_anual <- ggplot(cresc_anual_1_long, aes(x = as.factor(ano), y = Percentual, fill = Variavel)) +
+    geom_col(position = "dodge") +
+    geom_text(
+        aes(label = sprintf("%.1f", Percentual)),
+        position = position_dodge(width = 0.9),
+        vjust = -0.5,
+        size = 3.5
+    ) +
+    labs(
+        title = "Annual Growth Percentage - Officers in Government, in RAs and as appointees in RAs",
+        x = "Year",
+        y = "Growth (%)",
+        fill = ""
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(size = 12),
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 8),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8)
+    )
+
+fig_A_cres_anual
+
+ggsave("figures/fig_A_cres_anual.pdf", fig_A_cres_anual,
+       width = 8.5, height = 5, units = "in")
+
+
+############################################################
+######figure annual growth only 3 RAs
+###########################################################
+
+
+var_anual_3ras <- read_delim("var_anual_3ras.csv", 
+                             delim = ";", escape_double = FALSE, col_types = cols(var_officers_3ras_percent = col_number(), 
+                                                                                  var_officers_appointees_3ras_percent = col_number(), 
+                                                                                  var_officers_toplevel_3ras_percent = col_number()), 
+                             trim_ws = TRUE)
+View(var_anual_3ras)
+
+
+
+ras_long <- var_anual_3ras %>%
+    select(year, var_officers_3ras_percent, var_officers_appointees_3ras_percent, var_officers_toplevel_3ras_percent) %>%
+           pivot_longer(
+               cols = starts_with("var_officers"),
+               names_to = "variable",
+               values_to = "percentage"
+           )
+           
+           
+           # Ajustar nomes legíveis para legenda
+           ras_long$variable <- recode(ras_long$variable,
+                                      "var_officers_3ras_percent" = "Officers 3ras %",
+                                      "var_officers_appointees_3ras_percent" = "Appointed Officers 3ras %",
+                                      "var_officers_toplevel_3ras_percent" = "Top-level Officers 3ras %"
+           )
+           
+           # Criar gráfico de barras agrupadas
+           fig_A_var_3ras <- ggplot(ras_long, aes(x = factor(year), y = percentage, fill = variable)) +
+               geom_col(position = "dodge") +
+               geom_text(aes(label = sprintf("%.1f%%", percentage)),
+                         position = position_dodge(width = 0.9),
+                         vjust = -0.5,
+                         size = 3) +
+               labs(
+                   title = "Annual Variation Percentages - Officers in the 3 selected RAs",
+                   x = "Year",
+                   y = "Percentage (%)",
+                   fill = "Category"
+               ) +
+               theme_minimal()
+
+           
+           fig_A_var_3ras
+           
+                  ggsave("figures/fig_A_var_3ras.pdf", fig_A_var_3ras,
+                  width = 8.5, height = 5, units = "in")
+
+                  
+#####################################################
+##GRAFICO COMPARANDO TRES AGENCIAS COM AS DEMAIS ####
+#####################################################
+
+library(readr)
+compare_3ras_others <- read_delim("compare_3ras_others.csv", 
+                                                    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+View(compare_3ras_others)
+
+
+
+compare_3_8 <- compare_3ras_others %>%
+    select(year, 
+           `otherRA_officers_total__percent`,
+           `otherRAs_officers_appointees_percent`,
+           `otherRA_officers_top-level_percent`,
+           `3RA_total_officers_percent`,
+           `3RA_officers_appointees_percent`,
+           `3RA_officers_top-level_percent`)
+
+# Transformar para formato longo
+compare_long <- compare_3_8 %>%
+    pivot_longer(
+        cols = -year,
+        names_to = "variable",
+        values_to = "percentage"
+    )
+
+# Ajustar nomes das variáveis para legenda mais legível
+compare_long$variable <- recode(compare_long$variable,
+                           "otherRA_officers_total__percent" = "Other RAs - Total Officers",
+                           "otherRAs_officers_appointees_percent" = "Other RAs - Appointees",
+                           "otherRA_officers_top-level_percent" = "Other RAs - Top-level",
+                           "3RA_total_officers_percent" = "3 RAs - Total Officers",
+                           "3RA_officers_appointees_percent" = "3 RAs - Appointees",
+                           "3RA_officers_top-level_percent" = "3 RAs - Top-level"
+)
+
+# Criar gráfico de barras agrupadas
+fig_A_compare_3_8 <- ggplot(compare_long, aes(x = factor(year), y = percentage, fill = variable)) +
+    geom_col(position = "dodge") +
+    geom_text(aes(label = sprintf("%.1f%%", percentage)),
+              position = position_dodge(width = 0.9),
+              vjust = -0.5,
+              size = 2.5) +
+    labs(
+        title = "Annual Variation Rate Comparison - 3 RAs and the others",
+        x = "Year",
+        y = "Percentage (%)",
+        fill = "Category",
+        caption = "Variables: Other RAs - Total Officers, Appointees, Top-level | 3 RAs - Total Officers, Appointees, Top-level"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.caption = element_text(hjust = 0.5, size = 9),
+        legend.position = "bottom"
+    )
+
+fig_A_compare_3_8
+
+ggsave("figures/fig_A_compare_3_8.pdf", fig_A_compare_3_8,
+       width = 8.5, height = 5, units = "in")
+                  
+                  
+###########################################################
+#COMPARANDO AS 3 AGENCIAS COM AS DEMAIS, EM TOTAIS ANUAIS##
+###########################################################
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Leitura do arquivo CSV
+
+# Selecionar apenas ano e as 6 variáveis de totais
+compare <- compare_3ras_others %>%
+    select(year, 
+           otherRA_officers_total,
+           otherRAs_officers_appointees,
+           `otherRA_officers_top-level`,
+           `3RA_total_officers`,
+           `3RA_officers_appointees`,
+           `3RA_officers_top-level`)
+
+# Transformar para formato longo
+compare_long_1 <- compare %>%
+    pivot_longer(
+        cols = -year,
+        names_to = "variable",
+        values_to = "total"
+    )
+
+# Ajustar nomes das variáveis para legenda mais legível
+compare_long_1$variable <- recode(compare_long_1$variable,
+                           "otherRA_officers_total" = "Other RAs - Total Officers",
+                           "otherRAs_officers_appointees" = "Other RAs - Appointees",
+                           "otherRA_officers_top-level" = "Other RAs - Top-level",
+                           "3RA_total_officers" = "3 RAs - Total Officers",
+                           "3RA_officers_appointees" = "3 RAs - Appointees",
+                           "3RA_officers_top-level" = "3 RAs - Top-level"
+)
+
+# Criar gráfico de linhas
+fig_A_line_compare <- ggplot(compare_long_1, aes(x = year, y = total, color = variable, group = variable)) +
+    geom_line(size = 1) +
+    geom_point(size = 2) +
+    labs(
+        title = "Officer Totals Over Time - Comparison",
+        x = "Year",
+        y = "Number of Officers",
+        color = "Category",
+        caption = "Variables: Other RAs - Total Officers, Appointees, Top-level | 3 RAs - Total Officers, Appointees, Top-level"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.caption = element_text(hjust = 0.5, size = 9),
+        legend.position = "bottom",
+        legend.text = element_text(size = 8)
+    )
+
+fig_A_line_compare
+
+# Salvar o gráfico
+ggsave("figures/fig_A_line_compare.pdf", fig_A_line_compare,
+       width = 8.5, height = 5, units = "in")
