@@ -885,5 +885,8 @@ ggsave("figures/fig_A_facetas.pdf", fig_A_facetas,
     width = 8.5, height = 5, units = "in")
 
 
+############################################################
+###DADOS COM TOTAIS GERAIS CIVIS E MILITARES ARS E DEMAIS###
+############################################################
 
 
