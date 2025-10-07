@@ -610,21 +610,22 @@ fig_A_cres_anual <- ggplot(cresc_anual_1_long, aes(x = as.factor(ano), y = Perce
         aes(label = sprintf("%.1f", Percentual)),
         position = position_dodge(width = 0.9),
         vjust = -0.5,
-        size = 3.5
+        size = 2.5
     ) +
     labs(
-        title = "Annual Growth Percentage - Officers in Government, in RAs and as appointees in RAs",
+        title = "Annual Variation - Officers in Government, in RAs and as appointees in RAs (in %)",
         x = "Year",
         y = "Growth (%)",
         fill = ""
     ) +
     theme_minimal() +
     theme(
-        plot.title = element_text(size = 12),
-        axis.title = element_text(size = 10),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
         axis.text = element_text(size = 8),
         legend.title = element_text(size = 10),
-        legend.text = element_text(size = 8)
+        legend.text = element_text(size = 8),
+        legend.position = "bottom"   # <- legenda abaixo do gráfico
     )
 
 fig_A_cres_anual
@@ -658,9 +659,9 @@ ras_long <- var_anual_3ras %>%
            
            # Ajustar nomes legíveis para legenda
            ras_long$variable <- recode(ras_long$variable,
-                                      "var_officers_3ras_percent" = "Officers 3ras %",
-                                      "var_officers_appointees_3ras_percent" = "Appointed Officers 3ras %",
-                                      "var_officers_toplevel_3ras_percent" = "Top-level Officers 3ras %"
+                                      "var_officers_3ras_percent" = "Officers 3ras",
+                                      "var_officers_appointees_3ras_percent" = "Appointed Officers 3ras",
+                                      "var_officers_toplevel_3ras_percent" = "Top-level Officers 3ras"
            )
            
            # Criar gráfico de barras agrupadas
@@ -669,16 +670,23 @@ ras_long <- var_anual_3ras %>%
                geom_text(aes(label = sprintf("%.1f%%", percentage)),
                          position = position_dodge(width = 0.9),
                          vjust = -0.5,
-                         size = 3) +
+                         size = 2.5) +
                labs(
-                   title = "Annual Variation Percentages - Officers in the 3 selected RAs",
+                   title = "Annual Variation - Officers in the 3 selected Regulatoy Agencies",
                    x = "Year",
-                   y = "Percentage (%)",
-                   fill = "Category"
+                   y = "Variation (%)",
+                   fill = ""
                ) +
-               theme_minimal()
-
-           
+               theme_minimal() +
+                   theme(
+                       plot.title = element_text(size = 10, hjust = 0.5), #centraliza o título
+                       axis.title = element_text(size = 8),
+                       axis.text = element_text(size = 8),
+                       legend.title = element_text(size = 10),
+                       legend.text = element_text(size = 8),
+                       legend.position = "bottom"   # <- legenda abaixo do gráfico
+                   )
+               
            fig_A_var_3ras
            
                   ggsave("figures/fig_A_var_3ras.pdf", fig_A_var_3ras,
