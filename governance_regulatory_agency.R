@@ -885,5 +885,84 @@ ggsave("figures/fig_A_facetas.pdf", fig_A_facetas,
     width = 8.5, height = 5, units = "in")
 
 
+############################################################
+###DADOS COM TOTAIS GERAIS CIVIS E MILITARES ARS E DEMAIS###
+############################################################
+
+#importanto da tabela de somas gerais
+library(readxl)
+general_sums <- read_excel("table_general_sums.xlsx")
+View(general_sums)
+
+# criando o dataset
+general_sums_1 <- general_sums %>%
+    pivot_longer(cols = 2:7, names_to = "variable", values_to = "value") %>%
+    mutate(variable = recode(variable,
+                             "total_toplevel_3RAs" = "Toplevel 3RAs",
+                             "total_appointees_3RAs" = "Appointees 3RAs",
+                             "total_servants_3RAs" = "Servants 3RAs",
+                             "total_toplevel_otherRAs" = "Toplevel Other RAs",
+                             "total_appointees_otherRAs" = "Appointees Other RAs",
+                             "total_servants_otherRAs" = "Servants Other RAs"
+    ))
+
+fig_A_general_sum_1 <- ggplot(general_sums_1, aes(x = year, y = value, color = variable)) +
+    geom_line(linewidth = 1) +
+    geom_point(size = 1) +
+    labs(
+        title = "Total servants by group of RAs (2013-2024)",
+        x = "Year",
+        y = "Value",
+        color = ""
+    ) +
+    theme_minimal(base_size = 10) +
+    theme(
+        legend.position = "bottom",   # legenda embaixo
+        legend.title = element_blank(),
+        legend.box = "horizontal"     # organiza legenda em linha
+    )
 
 
+fig_A_general_sum_1
+
+ggsave("figures/fig_A_general_sum_1.pdf", fig_A_general_sum_1,
+       width = 8.5, height = 5, units = "in")
+
+
+###Novo gráfico de comparação
+# Selecionar apenas colunas year, 8 e 13
+
+general_sum_2 <- general_sums %>%
+    select(year, 8:13) %>%
+    pivot_longer(cols = -year, names_to = "variable", values_to = "value") %>%
+    mutate(variable = recode(variable,
+                             "total_toplevel_officers_3RAs" = "Toplevel Officers 3RAs",
+                             "total_appointees_officers_3RAs" = "Appointees Officers 3RAs",
+                             "total_servants_officers_3RAs" = "Servants Officers 3RAs",
+                             "total_toplevel_officers_otherRAs" = "Toplevel Officers Other RAs",
+                             "total_appointees_officers_otherRAs" = "Appointees Officers Other RAs",
+                             "total_servants_officers_otherRAs" = "Servants Officers Other RAs"
+    ))
+
+
+# Gráfico
+fig_A_general_sum_2 <- ggplot(general_sum_2, aes(x = year, y = value, color = variable)) +
+    geom_line(linewidth = 1) +
+    geom_point(size = 1.5) +
+    labs(
+        title = "Total officers by group of RAs (2013-2024)",
+        x = "Year",
+        y = "Value",
+        color = ""
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+        legend.position = "bottom",   # legenda embaixo
+        legend.title = element_blank(),
+        legend.box = "horizontal"
+    )
+
+fig_A_general_sum_2
+
+ggsave("figures/fig_A_general_sum_2.pdf", fig_A_general_sum_2,
+width = 8.5, height = 5, units = "in")
