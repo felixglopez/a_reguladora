@@ -87,9 +87,9 @@ ar_long <- ar_plot %>%
 
 # Rótulos legíveis
 rotulos <- c(
-    "cres_militares_governo" = "Federal Executive",
-    "cres_militares_ar" = "Military in All Regulatory Agencies",
-    "cres_militares_ar_cargo" = "Military as Appointees in All Regulatory Agencies"
+    "cres_militares_governo" = "Officers in all Federal Executive",
+    "cres_militares_ar" = "Officers in All RAs",
+    "cres_militares_ar_cargo" = "Officers as Appointees in All RAs"
 )
 
 # Gráfico
@@ -103,10 +103,10 @@ fig_1b <- ggplot(ar_long, aes(x = ano_arq_tot, y = crescimento, color = serie)) 
     labs(
         title = "Annual Trajectory of Military Officers in Government and RAs (Baseline: 2013, 2013–2024)",
         x = "Year",
-        y = "Growth (%)",
+        y = "Variation (%)",
         color = ""
     ) +
-    theme_minimal(base_size = 12) +
+    theme_minimal(base_size = 10) +
     theme(
         panel.grid.minor = element_blank(),
         legend.position = "bottom"
@@ -114,12 +114,9 @@ fig_1b <- ggplot(ar_long, aes(x = ano_arq_tot, y = crescimento, color = serie)) 
 
 fig_1b
 
-if(!dir.exists("figures")) {
-    dir.create("figures")
-}
 
 ggsave("figures/fig_1b.pdf", fig_1b,
-       width = 6.5, height = 5, units = "in")
+       width = 8.5, height = 5, units = "in")
 
 
 ###AGORA CRIAR O GRÁFICO 1A (identico ao que já está no texto)
@@ -377,6 +374,7 @@ fig_2c <- ggplot(plot_long, aes(x = ano_arq, y = valor, color = tipo)) +
 
 
 fig_2c
+
 ggsave("figures/fig_2c.pdf", fig_2c,
        width = 6.5, height = 5, units = "in")
 
@@ -868,20 +866,23 @@ plot_long <- base_df %>%
 # Gráfico com facetas por AR e 3 linhas por faceta
 fig_A_facetas <- ggplot(plot_long, aes(x = ano_arq, y = valor, color = dim)) +
     geom_line(linewidth = 1) +
-    geom_point(linewidth = 1.8) +
-    scale_color_manual(values = c("Total" = "#1b9e77", "Appointees" = "#7570b3", "Top-level appointees" = "#d95f02")) +
+    geom_point(size = 1.8) +  # <- era linewidth
+    scale_color_manual(values = c("Total" = "#1b9e77",
+                                  "Appointees" = "#7570b3",
+                                  "Top-level appointees" = "#d95f02")) +
     scale_x_continuous(breaks = sort(unique(plot_long$ano_arq))) +
     scale_y_continuous(labels = label_number(big.mark = ".", decimal.mark = ",")) +
     labs(
         title = "Officers by Regulatory Agency: total, total in appointed positions, and total in the top-level",
-        x = "Year",
-        y = "Amount",
-        color = ""
+        x = "Year", y = "Amount", color = ""
     ) +
     facet_wrap(~ ar, ncol = 4, scales = "free_y") +
     theme_minimal(base_size = 10) +
     theme(
         panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 10, hjust = 0.5),
+        axis.title = element_text(size = 9),
+        axis.text  = element_text(size = 8),
         legend.position = "bottom"
     )
 
@@ -974,3 +975,128 @@ fig_A_general_sum_2
 
 ggsave("figures/fig_A_general_sum_2.pdf", fig_A_general_sum_2,
 width = 8.5, height = 5, units = "in")
+
+
+#############
+#FACETAS
+#########
+
+# Pacotes
+library(tidyverse)
+
+# 1) Ler o CSV separado por ponto e vírgula
+library(readr)
+compare_df <- read_delim("compare_3ras_others.csv", 
+                                  delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# --- FACETAS COM VALORES ABSOLUTOS -----------------------------------------
+
+# 2) Seleciona apenas as colunas "absolutas"
+df_abs <- compare_df %>%
+    select(
+        year,
+        otherRA_officers_total,
+        otherRAs_officers_appointees,
+        `otherRA_officers_top-level`,
+        `3RA_total_officers`,
+        `3RA_officers_appointees`,
+        `3RA_officers_top-level`
+    )
+
+# 3) Converte para formato longo com dois níveis: grupo (3RA vs otherRA) e métrica
+abs_long <- df_abs %>%
+    pivot_longer(
+        -year,
+        names_to = c("group", "metric"),
+        names_pattern = "(otherRA|3RA)[_]?(.*)"  # separa "otherRA" ou "3RA" do restante
+    ) %>%
+    mutate(
+        metric = case_when(
+            metric %in% c("officers_total", "total_officers") ~ "Total officers",
+            metric %in% c("officers_appointees", "officers_appointees") ~ "Officers as appointees",
+            metric %in% c("officers_top-level", "officers_top-level") ~ "Top-level officers",
+            TRUE ~ metric
+        ),
+        group = recode(group, otherRA = "Other RAs", `3RA` = "3 RAs")
+    )
+
+# 4) Gráfico com 3 facetas (uma por métrica), comparando 3 RAs vs Other RAs
+fig_abs <- ggplot(abs_long, aes(x = factor(year), y = value, group = group, color = group)) +
+    geom_line(size = 0.9) +
+    geom_point(size = 2) +
+    facet_wrap(~ metric, ncol = 1, scales = "free_y") +
+    labs(
+        title = "Officers in RAs: totals, appointees, and top-level (3 RAs vs Other RAs)",
+        x = "Year",
+        y = "Count",
+        color = ""
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(size = 11, hjust = 0.5), # centraliza o título
+        axis.title = element_text(size = 9),
+        axis.text = element_text(size = 8),
+        legend.position = "bottom"
+    )
+
+fig_abs
+
+# --- FACETAS COM PERCENTUAIS ------------------------------------------------
+
+
+
+df_pct <- df %>%
+    select(
+        year,
+        otherRA_officers_total__percent,
+        otherRAs_officers_appointees_percent,
+        otherRA_officers_top-level_percent,
+        `3RA_total_officers_percent`,
+        `3RA_officers_appointees_percent`,
+        `3RA_officers_top-level_percent`
+    )
+
+pct_long <- df_pct %>%
+    pivot_longer(
+        -year,
+        names_to = c("group", "metric", "suffix"),
+        names_pattern = "(otherRA|3RA)[_]?(.*)_(percent)$"
+    ) %>%
+    mutate(
+        metric = case_when(
+            metric %in% c("officers_total", "total_officers") ~ "Total officers",
+            metric %in% c("officers_appointees", "officers_appointees") ~ "Officers as appointees",
+            metric %in% c("officers_top-level", "officers_top-level") ~ "Top-level officers",
+            TRUE ~ metric
+        ),
+        group = recode(group, otherRA = "Other RAs", `3RA` = "3 RAs")
+    )
+
+fig_pct <- ggplot(pct_long, aes(x = factor(year), y = value, group = group, color = group)) +
+    geom_line(size = 0.9) +
+    geom_point(size = 2) +
+    facet_wrap(~ metric, ncol = 1) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 0.1, scale = 1)) +
+    labs(
+        title = "Officers in RAs (Percent): totals, appointees, and top-level (3 RAs vs Other RAs)",
+        x = "Year",
+        y = "Percent",
+        color = ""
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(size = 11, hjust = 0.5),
+        axis.title = element_text(size = 9),
+        axis.text = element_text(size = 8),
+        legend.position = "bottom"
+    )
+
+fig_pct
+
+# --- SALVAR ARQUIVOS --------------------------------------------------------
+
+# cria a pasta figures caso não exista
+if (!dir.exists("figures")) dir.create("figures", recursive = TRUE)
+
+ggsave("figures/fig_facets_absolute.pdf", fig_abs, width = 8, height = 9, units = "in")
+ggsave("figures/fig_facets_percent.pdf",  fig_pct, width = 8, height = 9, units = "in")
